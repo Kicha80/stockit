@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - All Sectors Combined PDF</title>
+    <link rel="stylesheet" href="../static/stock_style.css">
+    <style>
+        /* General container for the dashboard */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+            display: flex; /* Use flexbox to center content */
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Ensure it takes full viewport height */
+        }
+        .dashboard-container {
+            max-width: 900px; /* Adjusted width for focus on PDF */
+            width: 100%; /* Take full width up to max-width */
+            margin: 20px; /* Add some margin around the container */
+            padding: 30px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .dashboard-container h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .dashboard-container p {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        /* Styles for the PDF Viewer Section (now central) */
+        .pdf-viewer-section {
+            padding-top: 0; /* No need for extra padding if it's the main section */
+        }
+        #pdf-canvas {
+            border: 1px solid #ccc;
+            margin-top: 15px;
+            width: 100%; /* Canvas will scale to this width */
+            max-width: 100%;
+            height: auto; /* Height adjusts proportionally */
+            display: block; /* To remove extra space below canvas */
+        }
+        .pdf-controls {
+            margin-top: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center; /* Align items vertically in center */
+            gap: 10px;
+        }
+        .pdf-controls button {
+            background-color: #28a745;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .pdf-controls button:hover {
+            background-color: #218838;
+        }
+        #page-num, #page-count {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <h1>Dashboard - All Sectors Combined PDF</h1>
+        
+        <p>This dashboard displays the "All Sectors Combined" PDF document.</p>
+
+        <div class="pdf-viewer-section">
+            <div class="pdf-controls">
+                <button id="prev-page">Previous Page</button>
+                <span>Page: <span id="page-num"></span> / <span id="page-count"></span></span>
+                <button id="next-page">Next Page</button>
+            </div>
+            <canvas id="pdf-canvas"></canvas>
+            <p style="margin-top: 10px; font-style: italic; color: #666;">Note: This PDF is loaded from the server and rendered client-side.</p>
+        </div>
+
+    </div>
+
+    <script type="module">
+        // Import pdfjsLib from the ES module build of PDF.js
+        import * as pdfjsLib from '../static/build/pdf.mjs'; // Note: Changed to pdf.mjs
+
+        // Set the worker source for PDF.js (important!)
+        // Note: Changed to pdf.worker.mjs
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '../static/build/pdf.worker.mjs';
+
+        // URL of your PDF file (from static/dynamic_plots folder)
+        const pdfUrl = "{{ url_for('static', filename='dynamic_plots/all_sectors_combined.pdf') }}";
+
+        let pdfDoc = null,
+            pageNum = 1,
+            pageRendering = false,
+            pageNumPending = null,
+            scale = 1.5, // You can adjust the scale
+            canvas = document.getElementById('pdf-canvas'),
+            ctx = canvas.getContext('2d');
+
+        /**
+         * Get page info from document, resize canvas accordingly, and render page.
+         * @param num Page number.
+         */
+        function renderPage(num) {
+            pageRendering = true;
+            // Using promise to fetch the page
+            pdfDoc.getPage(num).then(function(page) {
+                const viewport = page.getViewport({ scale: scale });
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                // Render PDF page into canvas context
+                const renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+                const renderTask = page.render(renderContext);
+
+                // Wait for rendering to finish
+                renderTask.promise.then(function() {
+                    pageRendering = false;
+                    if (pageNumPending !== null) {
+                        // New page rendering is pending
+                        renderPage(pageNumPending);
+                        pageNumPending = null;
+                    }
+                });
+            });
+
+            // Update page counters
+            document.getElementById('page-num').textContent = num;
+        }
+
+        /**
+         * If another page rendering in progress, waits until the rendering is
+         * finished. Otherwise, executes rendering immediately.
+         */
+        function queueRenderPage(num) {
+            if (pageRendering) {
+                pageNumPending = num;
+            } else {
+                renderPage(num);
+            }
+        }
+
+        /**
+         * Displays previous page.
+         */
+        document.getElementById('prev-page').addEventListener('click', function() {
+            if (pageNum <= 1) {
+                return;
+            }
+            pageNum--;
+            queueRenderPage(pageNum);
+        });
+
+        /**
+         * Displays next page.
+         */
+        document.getElementById('next-page').addEventListener('click', function() {
+            if (pageNum >= pdfDoc.numPages) {
+                return;
+            }
+            pageNum++;
+            queueRenderPage(pageNum);
+        });
+
+        /**
+         * Asynchronously downloads PDF.
+         */
+        pdfjsLib.getDocument(pdfUrl).promise.then(function(pdfDoc_) {
+            pdfDoc = pdfDoc_;
+            document.getElementById('page-count').textContent = pdfDoc.numPages;
+
+            // Initial rendering of first page
+            renderPage(pageNum);
+        }).catch(function(error) {
+            console.error('Error loading PDF:', error);
+            const pdfViewerSection = document.querySelector('.pdf-viewer-section');
+            pdfViewerSection.innerHTML = '<p style="color: red; font-weight: bold;">Error: Could not load PDF document. Please check: <br>1. The filename in static/dynamic_plots matches: all_sectors_combined.pdf<br>2. PDF.js files (pdf.mjs and pdf.worker.mjs) are correctly placed in /static/build/. <br>3. Flask is correctly serving static files (check app.py configuration).</p>';
+        });
+    </script>
+</body>
+</html>

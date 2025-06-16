@@ -1,0 +1,18 @@
+IL8BY1S1UKLFM8AO
+
+Welcome to Alpha Vantage! Here is your API key: 2XJXUO3TUBVCM7SN. Please record this API key at a safe place for future data acces
+
+NDUYYCPNO3KKHI71
+1I3HPIR7ENUDXWWX
+
+ZYY7BBVIF48WQURW
+
+// Call fetchStockSymbols when the page loads
+       // window.onload = function() {
+          //  fetchStockSymbols();}
+		  
+		  newsapi -30bd19ffe3fc40c7bd199544bb554eeb
+		  
+G59GYR5NJFXHORZ7
+
+ZB7LGCXYUCS5N1NW

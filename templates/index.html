@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Analyzer</title>
+    <link rel="stylesheet" href="../static/stock_style.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+</head>
+<body>
+    <div class="container">
+        <h1 class="banner-title">StockIt</h1>
+        <p class="catch-phrase">- <span id="catchy-phrase">Historic Data Dashboard at a glance</span></p>
+
+        <div id="time-container" class="time-container">
+            <span id="place">Place: GMT</span>
+            <span id="time"></span>
+        </div>
+
+        <div class="menu-bar">
+            <a href="https://www.moneycontrol.com/markets/global-indices/" class="menu-title">Global Markets</a>
+            <a href="/dashboard" class="menu-title">Dashboard</a> <a href="https://www.moneycontrol.com/stocks/marketstats/nsegainer/index.php" class="menu-title">Top Gainers</a>
+            <a href="https://www.moneycontrol.com/stocks/marketstats/nse_pshockers/index.php" class="menu-title">PriceShockers</a>
+            <a href="https://www.moneycontrol.com/news/business/ipo/" class="menu-title">IPO</a>
+            <a href="https://www.moneycontrol.com/stocks/marketstats/nsehigh/index.php" class="menu-title">52Week High</a>
+        </div>
+
+       <div class="content-container">
+    <div class="left-section">
+        <fieldset class="historical-data-section">
+            <legend class="section-caption">Historical Data Analysis - Multiselect up to 3 stocks</legend>
+            <form id="stock-form">
+                <label for="stock-symbol" class="bold-label">Stocks<span style="color: red;">*</span>:</label>
+                <select id="stock-symbol" multiple="multiple" required class="js-example-basic-multiple">
+                    <option value="" disabled>Select Stock Symbols</option>
+                </select>
+                <div class="date-submit-container">
+                    <div class="date-fields">
+                        <label for="from-date" class="bold-label">From Date<span style="color: red;">*</span>:</label>
+                        <input type="date" id="from-date" required>
+                        <label for="to-date" class="bold-label">To Date<span style="color: red;">*</span>:</label>
+                        <input type="date" id="to-date" required>
+                    </div>
+                    <input type="submit" value="Submit">
+                </div>
+            </form>
+            <table id="stock-data">
+                <thead>
+                    <tr>
+                        <th>Stock</th>
+                        <th>Date</th>
+                        <th>Open</th>
+                        <th>High</th>
+                        <th>Low</th>
+                        <th>Close</th>
+                        <th>Volume</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <div id="pagination-controls">
+                <button id="prev-page" onclick="prevPage()">Previous</button>
+                <span id="page-info"></span>
+                <button id="next-page" onclick="nextPage()">Next</button>
+            </div>
+            <div id="chart-container">
+                <canvas id="stock-chart"></canvas>
+            </div>
+        </fieldset>
+    </div>
+    <div class="right-section">
+        <fieldset class="useful-stock-screens">
+             <legend class="section-caption">Useful Stock Screens</legend>
+            <div class="new-sections-container">
+                <div class="section-box">
+                    <h2 class="section-title"><a href="https://www.screener.in/explore/" target="_blank">Price or Volume</a></h2>
+                </div>
+                <div class="section-box">
+                    <h2 class="section-title"><a href="https://www.screener.in/explore/" target="_blank">Valuation Screens</a></h2>
+                </div>
+                <div class="section-box">
+                    <h2 class="section-title"><a href="https://www.screener.in/explore/" target="_blank">Popular Formulas</a></h2>
+                </div>
+                <div class="section-box">
+                    <h2 class="section-title"><a href="https://www.screener.in/explore/" target="_blank">Quarterly Results</a></h2>
+                </div>
+                <div class="section-box">
+                    <h2 class="section-title"><a href="https://www.screener.in/explore/" target="_blank">Popular Stock Screens</a></h2>
+                </div>
+            </div>
+        </fieldset>
+        <div id="news-section">
+            <h2 class="section-title fancy-title">Ebiz News</h2>
+            <div id="news-feed-container">
+                <ul id="news-feed" class="scrolling-news">
+                    <li><a href="#">Headline 1</a></li>
+                    <li><a href="#">Headline 2</a></li>
+                    <li><a href="#">Headline 3</a></li>
+                    <li><a href="#">Headline 4</a></li>
+                    <li><a href="#">Headline 5</a></li>
+                    <li><a href="#">Headline 6</a></li>
+                    <li><a href="#">Headline 7</a></li>
+                    <li><a href="#">Headline 8</a></li>
+                    <li><a href="#">Headline 9</a></li>
+                    <li><a href="#">Headline 10</a></li>
+                </ul>
+            </div>
+        </div>
+        <div id="top-performers-section">
+            <h2 class="section-title fancy-title">Top Performers in Last 3 years</h2>
+            <div id="top-performers-dropdown">
+                <label for="industry-dropdown">Industry:</label>
+                <select id="industry-dropdown"></select>
+            </div>
+            <div id="top-performers-chart-container">
+                <canvas id="top-performers-chart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+    </div>
+    <div id="loading-message">Please wait...</div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="../static/stock_script.js"></script>
+</body>
+</html>
