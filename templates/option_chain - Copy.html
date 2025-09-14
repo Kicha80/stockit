@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Option Chain</title>
+  <style>
+    :root{
+      --call-bg:#eaf8ee; --put-bg:#f8f1e7; --strike-bg:#fff9c4;
+      --call-head:#dff3e6; --put-head:#efe6da;
+      --chg-max:#bfe7cb; --chg-min:#f4bcbc;
+      --oi-max:#d6b78d;  --oi-min:#f2e4ce;
+      --vol-max:#bed1ff; --vol-min:#e9f1ff;
+      --divider:#d8d8d8; --hdr-row-h:38px; /* taller titles row */
+
+      /* widths (other cols wider, strike much narrower) */
+      --col-w:68px;      /* wider data columns */
+      --strike-w:20px;   /* narrower strike column */
+
+      /* ITM shading */
+      --itm-bg:#e1e8f6;
+    }
+    body{font-family:Arial,sans-serif;margin:16px}
+    h2{margin:0 0 12px;font-size:26px}
+
+    /* grid with center column for the Key Levels button */
+    .grid{display:grid;grid-template-columns:1fr 90px 1fr;column-gap:22px;align-items:start}
+    .middle{display:flex;flex-direction:column;align-items:center;gap:.5rem;padding-top:8px}
+    #levelsBtn{
+      padding:.28rem .6rem;
+      font-size:12px;
+      border:1px solid #ccc;
+      border-radius:.35rem;
+      background:#fff;
+      cursor:pointer;
+    }
+    .divider{width:10px;background:var(--divider);border-radius:4px;opacity:.6;flex:1}
+
+    .card{background:#fff;border:1px solid #e6e6e6;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+    .card-header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px}
+    .title{font-weight:800;letter-spacing:.6px;text-transform:uppercase}
+    .controls label{margin-right:6px}.controls select{padding:2px 6px}
+    .wrap{padding:10px}.table-scroll{max-height:72vh;overflow:auto;border-radius:8px}
+
+    table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:12px;background:#fff}
+    th,td{border:1px solid #ddd;padding:3px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    th{background:#f6f6f6;text-align:left}
+    td{text-align:right}
+    th,td{width:var(--col-w)}
+    th.strike,td.strike{width:var(--strike-w);background:var(--strike-bg)!important;text-align:center;padding-left:2px;padding-right:2px}
+
+    /* CALL/PUT background tints */
+    thead .cols th.call,tbody td.call{background:var(--call-bg)}
+    thead .cols th.put, tbody td.put {background:var(--put-bg)}
+
+    /* ITM shading (body cells only) */
+    tbody td.call.itm, tbody td.put.itm { background: var(--itm-bg) !important; }
+
+    thead .group th{font-weight:700;text-align:center}
+    thead .group th.call{background:var(--call-head)}
+    thead .group th.put{background:var(--put-head)}
+    thead .group th.strike{background:var(--strike-bg)}
+
+    thead tr.group th{position:sticky;top:0;z-index:3;height:var(--hdr-row-h)}
+    thead tr.cols  th{position:sticky;top:var(--hdr-row-h);z-index:4;height:var(--hdr-row-h)}
+
+    /* allow wrap on titles row and add vertical room */
+    thead tr.cols th{
+      white-space:normal;
+      line-height:1.15;
+      padding-top:6px;
+      padding-bottom:6px;
+    }
+
+    /* widen the Chg OI column a bit */
+    th.chg, td.chg { width: calc(var(--col-w) + 10px); }
+
+    /* hi-max/min base */
+    td.hi-max.chg { background: var(--chg-max) !important; font-weight:600; }
+    td.hi-min.chg { background: var(--chg-min) !important; }
+    td.hi-max.oi  { background: var(--oi-max)  !important; font-weight:600; }
+    td.hi-min.oi  { background: var(--oi-min)  !important; }
+    td.hi-max.vol { background: var(--vol-max) !important; font-weight:600; }
+    td.hi-min.vol { background: var(--vol-min) !important; }
+
+    /* make highlight override ITM when both apply */
+    tbody td.itm.hi-max.vol { background: var(--vol-max) !important; }
+    tbody td.itm.hi-max.oi  { background: var(--oi-max)  !important; }
+    tbody td.itm.hi-max.chg { background: var(--chg-max) !important; }
+    tbody td.itm.hi-min.vol { background: var(--vol-min) !important; }
+    tbody td.itm.hi-min.oi  { background: var(--oi-min)  !important; }
+    tbody td.itm.hi-min.chg { background: var(--chg-min) !important; }
+
+    /* toolbar */
+    #oc-toolbar{display:flex;gap:.75rem;align-items:center;justify-content:flex-end;margin-bottom:.5rem}
+    #refreshBtn{padding:.4rem .8rem;border:1px solid #ccc;border-radius:.5rem;background:#fff;cursor:pointer}
+    #lastRef{opacity:.8}
+
+    /* -------- IV / LTP per-column widths (no HTML changes needed) -------- */
+    /* Order is CALL: IV(1) LTP(2) Vol(3) OI(4) ChgOI(5) | STRIKE(6) | PUT: ChgOI(7) OI(8) Vol(9) LTP(10) IV(11) */
+
+    /* Narrow IV */
+    table thead tr.cols th:nth-child(1),
+    table tbody tr td:nth-child(1),
+    table thead tr.cols th:nth-child(11),
+    table tbody tr td:nth-child(11) {
+      width: 10px !important;
+    }
+
+    /* Wider LTP */
+    table thead tr.cols th:nth-child(2),
+    table tbody tr td:nth-child(2),
+    table thead tr.cols th:nth-child(10),
+    table tbody tr td:nth-child(10) {
+      width: 95px !important;
+    }
+  </style>
+</head>
+<body>
+  <h2>Option Chain</h2>
+
+  <!-- top toolbar -->
+  <div id="oc-toolbar">
+    <button id="refreshBtn" type="button" onclick="goRefresh()">🔄 Refresh</button>
+    <small id="lastRef">Last refreshed: —</small>
+  </div>
+
+  <div class="grid">
+    <!-- NIFTY -->
+    <div class="card" data-underlying="{{ '%.2f'|format(underlying_n) if underlying_n is not none else '' }}">
+      <div class="card-header">
+        <div class="title">NIFTY
+          {% if underlying_n is not none %}
+            <span style="font-weight:600; margin-left:.35rem; opacity:.8;">
+              (@: {{ "%.2f"|format(underlying_n) }})
+            </span>
+          {% endif %}
+        </div>
+        <div class="controls">
+          <label>Expiry:</label>
+          <select onchange="setParam('expiry_n',this.value)">
+            {% for exp in nifty_expiry %}<option value="{{exp}}" {% if exp==selected_expiry_n %}selected{% endif %}>{{exp}}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="wrap">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr class="group">
+                <th class="call" colspan="5">CALL</th>
+                <th class="strike">STRIKE</th>
+                <th class="put" colspan="5">PUT</th>
+              </tr>
+              <tr class="cols">
+                {% for key in cols if key != 'EXPIRY DATE' %}
+                  {% set scaled = '(L)' in cols_display_n[loop.index0] %}
+                  {% set base = 'Strike' if key=='STRIKE'
+                                 else 'Chg OI' if 'CHG IN OI' in key
+                                 else 'OI' if key[:3]=='OI_'
+                                 else 'Vol' if 'VOLUME' in key
+                                 else 'IV' if 'IV_' in key
+                                 else 'LTP' if 'LTP_' in key
+                                 else key %}
+                  <th class="{% if loop.index <= 5 %}call{% endif %}{% if loop.index == 6 %} strike{% endif %}{% if loop.index >= 7 %} put{% endif %}{% if 'CHG IN OI' in key %} chg{% endif %}">
+                    {{ base }}{% if scaled %} (L){% endif %}
+                  </th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in nifty_data %}
+                <tr>
+                  {% set strike = row['STRIKE'] %}
+                  {% set ce_itm = (underlying_n is not none) and (strike is not none) and (strike < underlying_n) %}
+                  {% set pe_itm = (underlying_n is not none) and (strike is not none) and (strike > underlying_n) %}
+
+                  {% for key in cols if key != 'EXPIRY DATE' %}
+                    {% set v = row[key] %}
+                    {% set cls = [] %}
+                    {% if key in hi_n %}
+                      {% if v is not none and v == hi_n[key]['max'] %}{% set _ = cls.append('hi-max') %}
+                      {% elif v is not none and hi_n[key]['min'] is not none and v == hi_n[key]['min'] %}{% set _ = cls.append('hi-min') %}{% endif %}
+                    {% endif %}
+                    {% if key.startswith('VOLUME') %}{% set _ = cls.append('vol') %}
+                    {% elif key[:3]=='OI_' %}{% set _ = cls.append('oi') %}
+                    {% elif 'CHG IN OI' in key %}{% set _ = cls.append('chg') %}{% endif %}
+
+                    <td class="{{ ' '.join(cls) }}{% if loop.index <= 5 %} call{% if ce_itm %} itm{% endif %}{% endif %}{% if loop.index == 6 %} strike{% endif %}{% if loop.index >= 7 %} put{% if pe_itm %} itm{% endif %}{% endif %}">
+                      {{ v if v is not none else '' }}
+                    </td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- center column: Key Levels button + divider -->
+    <div class="middle">
+      <button id="levelsBtn" type="button" onclick="location.href='/key_levels'">📈 Key Levels</button>
+      <div class="divider"></div>
+    </div>
+
+    <!-- BANKNIFTY -->
+    <div class="card" data-underlying="{{ '%.2f'|format(underlying_b) if underlying_b is not none else '' }}">
+      <div class="card-header">
+        <div class="title">BANKNIFTY
+          {% if underlying_b is not none %}
+            <span style="font-weight:600; margin-left:.35rem; opacity:.8;">
+              (@ {{ "%.2f"|format(underlying_b) }})
+            </span>
+          {% endif %}
+        </div>
+        <div class="controls">
+          <label>Expiry:</label>
+          <select onchange="setParam('expiry_b',this.value)">
+            {% for exp in banknifty_expiry %}<option value="{{exp}}" {% if exp==selected_expiry_b %}selected{% endif %}>{{exp}}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="wrap">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr class="group">
+                <th class="call" colspan="5">CALL</th>
+                <th class="strike">STRIKE</th>
+                <th class="put" colspan="5">PUT</th>
+              </tr>
+              <tr class="cols">
+                {% for key in cols if key != 'EXPIRY DATE' %}
+                  {% set scaled = '(L)' in cols_display_b[loop.index0] %}
+                  {% set base = 'Strike' if key=='STRIKE'
+                                 else 'Chg OI' if 'CHG IN OI' in key
+                                 else 'OI' if key[:3]=='OI_'
+                                 else 'Vol' if 'VOLUME' in key
+                                 else 'IV' if 'IV_' in key
+                                 else 'LTP' if 'LTP_' in key
+                                 else key %}
+                  <th class="{% if loop.index <= 5 %}call{% endif %}{% if loop.index == 6 %} strike{% endif %}{% if loop.index >= 7 %} put{% endif %}{% if 'CHG IN OI' in key %} chg{% endif %}">
+                    {{ base }}{% if scaled %} (L){% endif %}
+                  </th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in banknifty_data %}
+                <tr>
+                  {% set strike = row['STRIKE'] %}
+                  {% set ce_itm = (underlying_b is not none) and (strike is not none) and (strike < underlying_b) %}
+                  {% set pe_itm = (underlying_b is not none) and (strike is not none) and (strike > underlying_b) %}
+
+                  {% for key in cols if key != 'EXPIRY DATE' %}
+                    {% set v = row[key] %}
+                    {% set cls = [] %}
+                    {% if key in hi_b %}
+                      {% if v is not none and v == hi_b[key]['max'] %}{% set _ = cls.append('hi-max') %}
+                      {% elif v is not none and hi_b[key]['min'] is not none and v == hi_b[key]['min'] %}{% set _ = cls.append('hi-min') %}{% endif %}
+                    {% endif %}
+                    {% if key.startswith('VOLUME') %}{% set _ = cls.append('vol') %}
+                    {% elif key[:3]=='OI_' %}{% set _ = cls.append('oi') %}
+                    {% elif 'CHG IN OI' in key %}{% set _ = cls.append('chg') %}{% endif %}
+
+                    <td class="{{ ' '.join(cls) }}{% if loop.index <= 5 %} call{% if ce_itm %} itm{% endif %}{% endif %}{% if loop.index == 6 %} strike{% endif %}{% if loop.index >= 7 %} put{% if pe_itm %} itm{% endif %}{% endif %}">
+                      {{ v if v is not none else '' }}
+                    </td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS (placed at end to avoid race conditions) -->
+  <script>
+    function setParam(key,val){
+      const u=new URL(location.href);
+      u.searchParams.set(key,val);
+      history.replaceState(null,"",u);
+      location.reload();
+    }
+    function fmtNow(){
+      const d=new Date();
+      return d.toLocaleString('en-IN',{hour12:false});
+    }
+    function updateStamp(){
+      const el=document.getElementById('lastRef');
+      if(el) el.textContent='Last refreshed: '+fmtNow();
+    }
+    function goRefresh(){
+      const u=new URL(location.href);
+      const params=new URLSearchParams({
+        expiry_n:u.searchParams.get('expiry_n')||'',
+        expiry_b:u.searchParams.get('expiry_b')||''
+      });
+      location.href='/refresh-oc?'+params.toString();
+    }
+    window.goRefresh = goRefresh;
+
+    /* Center nearest strike to spot inside each card */
+    function centerATM(cardEl){
+      const spot = parseFloat(cardEl.dataset.underlying);
+      if (!spot || isNaN(spot)) return;
+
+      const scroller = cardEl.querySelector('.table-scroll');
+      if (!scroller) return;
+
+      const rows = cardEl.querySelectorAll('tbody tr');
+      if (!rows.length) return;
+
+      let best = null, bestDiff = Infinity;
+      rows.forEach(row => {
+        const strikeCell = row.querySelector('td.strike');
+        if (!strikeCell) return;
+        const v = parseFloat((strikeCell.textContent || '').replace(/[, ]/g,''));
+        if (!isNaN(v)) {
+          const d = Math.abs(v - spot);
+          if (d < bestDiff) { best = row; bestDiff = d; }
+        }
+      });
+      if (!best) return;
+
+      const r = best.getBoundingClientRect();
+      const s = scroller.getBoundingClientRect();
+      const current = scroller.scrollTop;
+      const targetTop = current + (r.top - s.top) - (scroller.clientHeight/2 - best.clientHeight/2);
+      scroller.scrollTo({ top: Math.max(0, targetTop), behavior: 'auto' });
+    }
+    function centerBothATM(){
+      document.querySelectorAll('.card[data-underlying]').forEach(centerATM);
+    }
+
+    // Auto-refresh once per tab; retry once if spot missing; then center ATM
+    document.addEventListener('DOMContentLoaded', ()=>{
+      updateStamp();
+
+      const KEY='oc_ar_done';
+      const RETRY='oc_ar_retry';
+      const done = sessionStorage.getItem(KEY)==='1';
+      const spotExists = !!document.querySelector('.card .card-header .title span');
+
+      if (!done) {
+        sessionStorage.setItem(KEY,'1');
+        goRefresh();
+        return;
+      }
+      if (!spotExists && sessionStorage.getItem(RETRY)!=='1') {
+        sessionStorage.setItem(RETRY,'1');
+        goRefresh();
+        return;
+      }
+
+      centerBothATM();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!DOCTYPE html><html><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>All Sectors Scatter (PDF)</title>
+<style>
+  body{margin:0;background:#f4f5f7;font-family:Arial}
+  .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
+  .controls{display:flex;gap:10px;margin-bottom:10px}
+  .controls button{background:#28a745;color:#fff;border:0;border-radius:6px;padding:8px 12px;cursor:pointer}
+  #pdf-canvas{width:100%;height:auto;border:1px solid #ccc;border-radius:8px;background:#fff}
+</style>
+</head><body>
+<div class="wrap">
+  <div class="controls">
+    <a href="/dashboard"><button>← Back</button></a>
+    <button id="prev">Prev</button>
+    <span>Page: <b id="num">1</b> / <b id="count">–</b></span>
+    <button id="next">Next</button>
+  </div>
+  <canvas id="pdf-canvas"></canvas>
+</div>
+<script type="module">
+  import * as pdfjsLib from '../static/build/pdf.mjs';               /* uses your existing build */
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '../static/build/pdf.worker.mjs';
+  const pdfUrl = "{{ url_for('static', filename='dynamic_plots/all_sectors_combined.pdf') }}";
+  let doc=null, page=1, busy=false, pend=null, scale=1.5;
+  const c=document.getElementById('pdf-canvas'), ctx=c.getContext('2d');
+  function render(n){busy=true;doc.getPage(n).then(p=>{const vp=p.getViewport({scale});c.width=vp.width;c.height=vp.height;return p.render({canvasContext:ctx,viewport:vp}).promise;}).then(()=>{busy=false;document.getElementById('num').textContent=n;if(pend){const x=pend;pend=null;render(x);}});}
+  function queue(n){busy?pend=n:render(n)}
+  document.getElementById('prev').onclick=()=>{if(page>1){page--;queue(page)}};
+  document.getElementById('next').onclick=()=>{if(page<doc.numPages){page++;queue(page)}};
+  pdfjsLib.getDocument(pdfUrl).promise.then(pdf=>{doc=pdf;document.getElementById('count').textContent=pdf.numPages;render(page);});
+</script>
+</body></html>

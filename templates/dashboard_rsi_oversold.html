@@ -1,0 +1,57 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>RSI Oversold – KK Daily RSI experiment_Oversold</title>
+  <style>
+    body{margin:0;background:#f4f5f7;font-family:Arial}
+    .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
+    .btn{background:#28a745;color:#fff;border:0;border-radius:6px;padding:8px 12px;text-decoration:none}
+    table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #e6e6e6;border-radius:10px;overflow:hidden}
+    th,td{padding:8px 10px;border-bottom:1px solid #eee;font-size:14px}
+    th{text-align:left;background:#fafafa}
+    td.num{text-align:right}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p><a class="btn" href="/dashboard">← Back</a></p>
+    <h2>RSI Oversold – KK Daily RSI experiment_Oversold</h2>
+    <table id="rsi-full">
+      <thead>
+        <tr>
+          <th>#</th><th>Symbol</th><th class="num">Price</th><th class="num">Volume</th><th class="num">RSI</th>
+        </tr>
+      </thead>
+      <tbody><tr><td colspan="5" style="text-align:center;color:#666">Loading…</td></tr></tbody>
+    </table>
+  </div>
+
+  <script>
+    fetch("/api/rsi_oversold_csv").then(r=>r.json()).then(js=>{
+      const tb=document.querySelector("#rsi-full tbody");
+      if(!js.ok || !js.rows || !js.rows.length){
+        tb.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#c00">No data</td></tr>`;
+        return;
+      }
+      tb.innerHTML = js.rows.map((r,i)=>{
+        const sym = r.n || r.symbol || "";
+        const price = r.price ?? r.ltp ?? r.p ?? "";
+        const vol = r.volume ?? r.v ?? "";
+        const rsi = r.rsi ?? r.RSI ?? "";
+        return `<tr>
+          <td>${i+1}</td>
+          <td>${sym}</td>
+          <td class="num">${price}</td>
+          <td class="num">${vol}</td>
+          <td class="num">${rsi}</td>
+        </tr>`;
+      }).join("");
+    }).catch(()=>{
+      document.querySelector("#rsi-full tbody").innerHTML =
+        `<tr><td colspan="5" style="text-align:center;color:#c00">Fetch error</td></tr>`;
+    });
+  </script>
+</body>
+</html>

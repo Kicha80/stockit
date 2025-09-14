@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Key Levels</title>
+  <style>
+    :root{--strike-bg:#fff9c4; --divider:#d8d8d8; --s1:#e9f8ef; --s2:#f4fbf7; --r1:#fdecef; --r2:#fff6f7;}
+    body{font-family:Arial,sans-serif;margin:16px}
+    h2{margin:0 0 12px;font-size:26px}
+    .grid{display:grid;grid-template-columns:1fr 10px 1fr;column-gap:22px;align-items:start}
+    .divider{width:10px;background:var(--divider);border-radius:4px;opacity:.6}
+    .card{background:#fff;border:1px solid #e6e6e6;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+    .card-header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px}
+    .title{font-weight:800;letter-spacing:.6px;text-transform:uppercase}
+    .controls label{margin-right:6px}.controls select{padding:2px 6px}
+    .wrap{padding:10px}.table-scroll{max-height:72vh;overflow:auto;border-radius:8px}
+    table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:12px;background:#fff}
+    th,td{border:1px solid #ddd;padding:3px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}
+    th{background:#f6f6f6;text-align:left}
+    /* Soft column tints for Support (S1-S3) and Resistance (R1-R3) */
+    /* S1-S3 (columns 4-6) */
+    thead th:nth-child(4), tbody td:nth-child(4),
+    thead th:nth-child(5), tbody td:nth-child(5),
+    thead th:nth-child(6), tbody td:nth-child(6){
+      background: linear-gradient(180deg,var(--s1),var(--s2)) !important;
+    }
+    /* R1-R3 (columns 7-9) */
+    thead th:nth-child(7), tbody td:nth-child(7),
+    thead th:nth-child(8), tbody td:nth-child(8),
+    thead th:nth-child(9), tbody td:nth-child(9){
+      background: linear-gradient(180deg,var(--r1),var(--r2)) !important;
+    }
+
+    th.strike,td.strike{background:var(--strike-bg)!important;text-align:center}
+    /* ATM row */
+    tr.atm-row td{outline:2px solid #8ab4f8; outline-offset:-2px; background:#eef3ff;}
+	thead th {
+	  position: sticky;
+	  top: 0;
+	  z-index: 2;
+	}
+    /* toolbar */
+    #oc-toolbar{display:flex;gap:.75rem;align-items:center;justify-content:flex-end;margin-bottom:.75rem}
+    #backBtn,#refreshBtn{padding:.4rem .8rem;border:1px solid #ccc;border-radius:.5rem;background:#fff;cursor:pointer}
+  </style>
+</head>
+<body>
+  <h2>Key Levels</h2>
+
+  <div id="oc-toolbar">
+    <button id="backBtn" type="button" onclick="location.href='/option_chain'">← Option Chain</button>
+  </div>
+
+  <div class="grid">
+    <!-- NIFTY -->
+    <div class="card" data-underlying="{{ '%.2f'|format(underlying_n) if underlying_n is not none else '' }}">
+      <div class="card-header">
+        <div class="title">NIFTY
+          {% if underlying_n is not none %}
+            <span style="font-weight:600; margin-left:.35rem; opacity:.8;">
+              (@: {{ "%.2f"|format(underlying_n) }})
+            </span>
+          {% endif %}
+        </div>
+        <div class="controls">
+          <label>Expiry:</label>
+          <select onchange="setParam('expiry_n',this.value)">
+            {% for exp in nifty_expiry %}<option value="{{exp}}" {% if exp==selected_expiry_n %}selected{% endif %}>{{exp}}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="wrap">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th class="strike">Strike</th>
+                <th>LTP CE</th><th>LTP PE</th>
+                <th>S1</th><th>S2</th><th>S3</th>
+                <th>R1</th><th>R2</th><th>R3</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in nifty_data %}
+              <tr>
+                <td class="strike">{{ row['STRIKE'] if row['STRIKE'] is not none else '' }}</td>
+                <td>{{ row['LTP_CALL'] if row['LTP_CALL'] is not none else '' }}</td>
+                <td>{{ row['LTP_PUT']  if row['LTP_PUT']  is not none else '' }}</td>
+                <td>{{ row['S1'] if row['S1'] is not none else '' }}</td>
+                <td>{{ row['S2'] if row['S2'] is not none else '' }}</td>
+                <td>{{ row['S3'] if row['S3'] is not none else '' }}</td>
+                <td>{{ row['R1'] if row['R1'] is not none else '' }}</td>
+                <td>{{ row['R2'] if row['R2'] is not none else '' }}</td>
+                <td>{{ row['R3'] if row['R3'] is not none else '' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- BANKNIFTY -->
+    <div class="card" data-underlying="{{ '%.2f'|format(underlying_b) if underlying_b is not none else '' }}">
+      <div class="card-header">
+        <div class="title">BANKNIFTY
+          {% if underlying_b is not none %}
+            <span style="font-weight:600; margin-left:.35rem; opacity:.8;">
+              (@ {{ "%.2f"|format(underlying_b) }})
+            </span>
+          {% endif %}
+        </div>
+        <div class="controls">
+          <label>Expiry:</label>
+          <select onchange="setParam('expiry_b',this.value)">
+            {% for exp in banknifty_expiry %}<option value="{{exp}}" {% if exp==selected_expiry_b %}selected{% endif %}>{{exp}}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="wrap">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th class="strike">Strike</th>
+                <th>LTP CE</th><th>LTP PE</th>
+                <th>S1</th><th>S2</th><th>S3</th>
+                <th>R1</th><th>R2</th><th>R3</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in banknifty_data %}
+              <tr>
+                <td class="strike">{{ row['STRIKE'] if row['STRIKE'] is not none else '' }}</td>
+                <td>{{ row['LTP_CALL'] if row['LTP_CALL'] is not none else '' }}</td>
+                <td>{{ row['LTP_PUT']  if row['LTP_PUT']  is not none else '' }}</td>
+                <td>{{ row['S1'] if row['S1'] is not none else '' }}</td>
+                <td>{{ row['S2'] if row['S2'] is not none else '' }}</td>
+                <td>{{ row['S3'] if row['S3'] is not none else '' }}</td>
+                <td>{{ row['R1'] if row['R1'] is not none else '' }}</td>
+                <td>{{ row['R2'] if row['R2'] is not none else '' }}</td>
+                <td>{{ row['R3'] if row['R3'] is not none else '' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function setParam(key,val){
+      const u=new URL(location.href);
+      u.searchParams.set(key,val);
+      history.replaceState(null,"",u);
+      location.reload();
+    }
+
+    // Center nearest strike to spot + mark ATM row
+    function centerATM(cardEl){
+      const spot = parseFloat(cardEl.dataset.underlying);
+      if (!spot || isNaN(spot)) return;
+      const scroller = cardEl.querySelector('.table-scroll');
+      const rows = cardEl.querySelectorAll('tbody tr');
+      let best=null, bestDiff=Infinity;
+      rows.forEach(row=>{
+        const strikeCell = row.querySelector('td.strike');
+        const v = parseFloat((strikeCell?.textContent||'').replace(/[, ]/g,''));
+        if(!isNaN(v)){
+          const d = Math.abs(v-spot);
+          if(d<bestDiff){best=row; bestDiff=d;}
+        }
+      });
+      if(!best) return;
+      best.classList.add('atm-row');
+      const r = best.getBoundingClientRect();
+      const s = scroller.getBoundingClientRect();
+      const current = scroller.scrollTop;
+      const targetTop = current + (r.top - s.top) - (scroller.clientHeight/2 - best.clientHeight/2);
+      scroller.scrollTo({ top: Math.max(0, targetTop), behavior: 'auto' });
+    }
+    function centerBothATM(){
+      document.querySelectorAll('.card[data-underlying]').forEach(centerATM);
+    }
+    document.addEventListener('DOMContentLoaded', centerBothATM);
+  </script>
+</body>
+</html>

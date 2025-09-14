@@ -432,15 +432,16 @@ def option_chain():
 
     def scale_mark(df: pd.DataFrame):
         scaled = set()
-        # Decrease OI/Chg OI/Vol by 15% and round to 1 dp
         for c in COUNT_COLS:
             if c in df.columns:
                 s = pd.to_numeric(df[c], errors="coerce")
-                df[c] = (s * 0.85).round(1)
-        # Round IV/LTP to 1 dp
-        for c in ("IV_CALL","LTP_CALL","IV_PUT","LTP_PUT"):
-            if c in df.columns:
-                df[c] = pd.to_numeric(df[c], errors="coerce").round(1)
+                if c.startswith("OI_") or ("CHG IN OI" in c):
+                    df[c] = (s / 100000).round(3); scaled.add(c)
+                else:
+                    if s.max(skipna=True) >= 100000:
+                        df[c] = (s / 100000).round(2); scaled.add(c)
+                    else:
+                        df[c] = s.round(2)
         return df, scaled
 
     dn, scaledN = scale_mark(dn)

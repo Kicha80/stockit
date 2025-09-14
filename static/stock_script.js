@@ -413,3 +413,35 @@ setInterval(updateTime, 1000);
 
 // Initialize the time immediately
 updateTime();
+
+// ===================== 📉 GET VOLUME CONTRACTION FUNCTION =====================
+function getVolumeContraction() {
+    fetch('/volume_contraction')
+        .then(response => response.json())
+        .then(data => {
+            const tableBody = document.querySelector('#contraction-table tbody');
+            tableBody.innerHTML = '';
+
+            data.forEach(stock => {
+                const row = document.createElement('tr');
+
+                // Apply color coding based on contraction strength
+                let color = '';
+                if (stock.percent_below_avg >= 50) color = '#ffcccc';
+                else if (stock.percent_below_avg >= 30) color = '#ffe0b3';
+                else color = '#e0ffe0';
+                row.style.backgroundColor = color;
+
+                row.innerHTML = `
+                    <td>${stock.symbol}</td>
+                    <td>${stock.latest_volume}</td>
+                    <td>${stock.avg_volume}</td>
+                    <td>${stock.percent_below_avg}%</td>
+                    <td>${stock.close}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        })
+        .catch(error => console.error('Error fetching volume contraction:', error));
+}
+// ===================== ✅ END VOLUME CONTRACTION FUNCTION =====================

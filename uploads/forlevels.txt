@@ -1,0 +1,13 @@
+compute_levels(df)
+
+Builds S1, S2, S3, R1, R2, R3 per strike using:
+
+mmin = min(CALL_LTP, PUT_LTP)
+
+mmax = max(CALL_LTP, PUT_LTP)
+
+ssum = CALL_LTP + PUT_LTP
+
+S1 = Strike − mmin, S2 = Strike − mmax, S3 = Strike − ssum
+
+R1 = Strike + mmin, R2 = Strike + mmax, R3 = Strike + ssum
